@@ -46,7 +46,7 @@
 | 图像处理 | Pillow + exifread |
 | LLM / 视觉 / Embedding | OpenAI 兼容接口（LangChain ChatOpenAI） |
 | 前端 | Next.js 16 + React 19 + TypeScript + axios + framer-motion |
-| 可观测 | Langfuse（可选，旁路埋点） |
+| 可观测 | Langfuse |
 | 日志 | 控制台 + 按天文件（backend/logs/app_YYYYMMDD.log） |
 
 ---
@@ -81,8 +81,6 @@ personal_memory_agent/
 │   │   ├── embedding_client.py     # Embedding 客户端
 │   │   ├── langfuse_client.py      # Langfuse 埋点
 │   │   └── logger.py               # 统一日志
-│   ├── storage/              # 运行时数据（不提交 git）
-│   └── logs/                 # 运行日志（不提交 git）
 └── frontend/
     ├── app/                  # Next.js App Router
     ├── components/           # UI 组件
