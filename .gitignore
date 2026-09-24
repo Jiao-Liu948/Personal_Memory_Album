@@ -1,0 +1,79 @@
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# ==================== 环境变量====================
+.env
+.env.*
+!.env.example
+
+# ==================== 运行时数据====================
+backend/storage/
+backend/logs/
+
+# ==================== 评测报告====================
+backend/evaluation/reports/
+
+# ==================== 数据备份 ====================
+backups/
+
+# ==================== 本地运维脚本 ====================
+backend/test.py
+*.bat
+部署说明.md
+
+# ==================== 前端 ====================
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==================== IDE / 编辑器 ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== 系统文件 ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== 临时文件 ====================
+*.tmp
+*.temp
+*.log

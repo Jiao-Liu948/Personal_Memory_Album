@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+sqlalchemy
+pymysql
+python-multipart
+pillow
+exifread
+langgraph
+langchain
+langchain-openai
+chromadb
+insightface
+langfuse
+numpy
+opencv-python
