@@ -112,6 +112,20 @@ GLOBAL_CHAT_SYSTEM = """
 """
 
 
+# general 意图不检索记忆，素材必然是空的。
+# 若继续用上面的 prompt，模型会被"必须说没有相关记录"这条规则逼着答非所问
+# （用户说"你好"会被回成"我的记忆中没有相关记录"），所以单独给一套宽松规则。
+GLOBAL_CHAT_CHITCHAT_SYSTEM = """
+你是用户的专属记忆管家。用户这句话不涉及回忆检索，属于普通交流。
+
+回答规则：
+1. 自然地回应用户，像老朋友一样简短亲切，一两句话即可，不要用列表
+2. 不要编造任何关于用户过去的回忆、事件、人物或细节
+3. 如果用户其实是想回忆某段过去，可以顺势引导他把问题问得更具体一点
+   （比如带上人物、地点或时间），这样我才能去记忆里找
+"""
+
+
 def global_chat(db: Session, user_query: str) -> dict:
     """全局跨照片问答"""
     # 1. 意图解析
@@ -120,7 +134,7 @@ def global_chat(db: Session, user_query: str) -> dict:
     # 2. 人名转人物ID
     person_ids = _name_to_person_ids(db, intent_info.get("person_names", []))
 
-    # 3. 双引擎检索
+    # 3. 双引擎检索（把已解析出的意图传下去，由它决定权重或是否跳过召回）
     search_result = hybrid_search(
         db,
         query=intent_info.get("query", user_query),
@@ -128,7 +142,8 @@ def global_chat(db: Session, user_query: str) -> dict:
         location=intent_info.get("location") or None,
         time_keyword=intent_info.get("time_keyword") or None,
         tags=intent_info.get("tags") or None,
-        top_k=15
+        top_k=15,
+        intent=intent_info.get("intent"),
     )
 
     facts = search_result.get("facts", [])
@@ -137,7 +152,8 @@ def global_chat(db: Session, user_query: str) -> dict:
     logger.info(
         f"全局问答 query={user_query!r} | intent={intent_info.get('intent')} "
         f"| 召回记忆={len(facts)} | 向量={search_result.get('vector_count', 0)} "
-        f"实体={search_result.get('entity_count', 0)}"
+        f"实体={search_result.get('entity_count', 0)} "
+        f"权重={search_result.get('weights')} 跳过召回={search_result.get('skipped', False)}"
     )
 
     # 4. 构建记忆上下文
@@ -162,7 +178,12 @@ def global_chat(db: Session, user_query: str) -> dict:
     history = _load_global_history()
 
     # 6. 构建prompt
-    system_text = GLOBAL_CHAT_SYSTEM.format(memory_context=memory_context)
+    #    跳过召回的意图（general）素材必然为空，走闲聊规则，
+    #    否则会被"必须说没有相关记录"的规则逼着答非所问。
+    if search_result.get("skipped"):
+        system_text = GLOBAL_CHAT_CHITCHAT_SYSTEM
+    else:
+        system_text = GLOBAL_CHAT_SYSTEM.format(memory_context=memory_context)
     messages = [SystemMessage(content=system_text)]
 
     for msg in history[-20:]:  # 只带最近20轮
@@ -190,7 +211,9 @@ def global_chat(db: Session, user_query: str) -> dict:
         "search_summary": {
             "vector_count": search_result.get("vector_count", 0),
             "entity_count": search_result.get("entity_count", 0),
-            "total": search_result.get("total", 0)
+            "total": search_result.get("total", 0),
+            "weights": search_result.get("weights"),
+            "skipped": search_result.get("skipped", False),
         }
     }
 

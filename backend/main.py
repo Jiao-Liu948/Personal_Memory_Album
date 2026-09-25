@@ -257,9 +257,15 @@ def hybrid_search_api(
     time_keyword: str = "",
     tags: str = "",
     top_k: int = 15,
+    intent: str = "",
     db: Session = Depends(get_db)
 ):
-    """双引擎融合搜索：向量语义 + 实体条件过滤"""
+    """
+    双层召回融合搜索：向量语义 + 实体匹配度，按意图加权统一排序。
+
+    intent 可选（statistic / relation / recall / general），用于调试不同权重：
+    不传则使用默认权重（实体 0.6 / 向量 0.4）。
+    """
     pid_list = [p.strip() for p in person_ids.split(",") if p.strip()] if person_ids else None
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
 
@@ -270,7 +276,8 @@ def hybrid_search_api(
         location=location or None,
         time_keyword=time_keyword or None,
         tags=tag_list,
-        top_k=top_k
+        top_k=top_k,
+        intent=intent or None,
     )
     return result
 
