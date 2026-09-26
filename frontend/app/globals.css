@@ -307,11 +307,273 @@ a {
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.18);
 }
 
-/* ============ 首页（功能介绍） ============ */
-.intro {
+/* ============ 首页：系统概览控制台 ============ */
+.overview {
   /* 只设置纵向内边距，横向沿用 .wrap */
   padding-top: 58px;
   padding-bottom: 150px;
+}
+
+/* ---- 指标卡 ---- */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.metric {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  transition: border-color 0.24s ease, transform 0.24s ease;
+}
+.metric:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-3px);
+}
+.metric-label {
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 10px 0 6px;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(120deg, #ffffff 20%, #c4b5fd 70%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.metric-value span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  -webkit-text-fill-color: var(--text-3);
+}
+.metric-sub {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ---- 处理管线 ---- */
+.pipeline-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+.pipeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.pipe-node {
+  position: relative;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.14), rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+}
+.pipe-idx {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+.pipe-stage {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.pipe-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.pipe-value span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.pipe-arrow {
+  position: absolute;
+  right: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: var(--text-3);
+  z-index: 1;
+}
+
+/* ---- 近 7 天入库量 ---- */
+.chart-title {
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 92px;
+}
+.chart-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 0;
+}
+.chart-bar {
+  width: 100%;
+  max-width: 30px;
+  border-radius: 7px 7px 3px 3px;
+  background: var(--grad-aurora);
+  box-shadow: 0 0 18px -8px rgba(139, 92, 246, 0.9);
+  transition: filter 0.2s ease;
+}
+.chart-col:hover .chart-bar {
+  filter: brightness(1.25);
+}
+.chart-label {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+/* ---- 知识 / 来源 两栏 ---- */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.source-row {
+  display: grid;
+  grid-template-columns: 76px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+}
+.source-name {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.source-bar {
+  height: 7px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.source-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--pill);
+  background: var(--grad-aurora);
+}
+.source-pct {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-2);
+}
+
+/* ---- 运行环境 ---- */
+.runtime {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.runtime-item {
+  padding: 15px 17px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.runtime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+.runtime-name {
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.rt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+.rt-dot--on {
+  background: #34d399;
+  box-shadow: 0 0 10px #34d399;
+}
+.runtime-model {
+  font-size: 13.5px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.runtime-url {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.cap {
+  padding: 6px 14px;
+  border-radius: var(--pill);
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.cap--on {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.12);
+}
+.overview-stamp {
+  font-size: 11.5px;
+  color: var(--text-3);
+  letter-spacing: 0.4px;
 }
 
 .hero {
@@ -1528,7 +1790,7 @@ a {
   .wrap {
     padding: 0 15px;
   }
-  .intro {
+  .overview {
     padding-top: 30px;
     padding-bottom: 130px;
   }

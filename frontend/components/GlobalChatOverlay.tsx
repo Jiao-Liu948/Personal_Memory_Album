@@ -68,7 +68,7 @@ export default function GlobalChatOverlay({
       >
         <section className="panel chat-panel">
           <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-            <span>🧠 全局记忆问答</span>
+            <span>🧠 跨影像知识问答</span>
             <button className="btn btn-ghost btn-sm" onClick={onClear}>
               🗑️ 清空
             </button>
@@ -78,17 +78,17 @@ export default function GlobalChatOverlay({
             {history.length === 0 && !loading ? (
               <div className="center-empty">
                 <div className="em">🔮</div>
-                <div style={{ fontWeight: 700 }}>跨照片，问我任何关于你过去的问题</div>
+                <div style={{ fontWeight: 700 }}>跨影像检索，直接提问即可</div>
                 <p className="side-empty" style={{ marginTop: 8 }}>
-                  比如「我去年去了哪些地方旅行？」「我和家人有哪些合照？」
-                  我会检索你所有的照片与记忆，把散落的回忆串起来。
+                  例如「去年去过哪些地方」「和谁一起拍的合照」——
+                  系统会用实体条件匹配叠加语义向量检索，把分散在各张影像上的信息聚合起来。
                 </p>
               </div>
             ) : (
               history.map((m, i) => <MessageBubble key={i} message={m} />)
             )}
 
-            {loading && <Typing text="正在检索你的记忆..." />}
+            {loading && <Typing text="正在检索知识库..." />}
 
             {relatedPhotos.length > 0 && (
               <motion.div

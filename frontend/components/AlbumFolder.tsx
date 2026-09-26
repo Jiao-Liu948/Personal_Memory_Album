@@ -72,11 +72,11 @@ export default function AlbumFolder({
 
           <div className="folder-back">
             <div className="folder-title">
-              <h2>📁 我的记忆相册</h2>
+              <h2>🗂️ 影像资产库</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="folder-count">{photos.length} 张照片</span>
+                <span className="folder-count">{photos.length} 项资产</span>
                 <button className="btn btn-glass btn-sm" onClick={pick} disabled={uploading}>
-                  {uploading ? '解析中…' : '＋ 上传照片'}
+                  {uploading ? '解析中…' : '＋ 导入影像'}
                 </button>
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function AlbumFolder({
             {uploading && (
               <div className="uploading">
                 <span className="spinner" />
-                AI 正在解析画面、识别亲友并抽取记忆，请稍候…
+                正在执行解析管线：视觉理解 → 人脸聚类 → 记忆抽取，请稍候…
               </div>
             )}
 
@@ -97,13 +97,13 @@ export default function AlbumFolder({
             ) : photos.length === 0 ? (
               <div className="empty-folder">
                 <div className="empty-art">🗂️</div>
-                <h3>这个文件夹还是空的</h3>
+                <h3>资产库还是空的</h3>
                 <p>
-                  上传第一张照片，AI 会自动解析画面、识别照片里的亲友，
-                  并把照片背后的故事沉淀成可以被随时唤醒的记忆。
+                  导入第一批影像，系统会自动完成元数据解析、画面理解与人脸聚类，
+                  并把可复用的信息沉淀为结构化记忆，供后续检索与问答使用。
                 </p>
                 <button className="btn btn-primary" onClick={pick} disabled={uploading}>
-                  📤 上传第一张照片
+                  📤 导入第一批影像
                 </button>
                 <p className="hint" style={{ marginTop: 12 }}>
                   支持 JPG / PNG / WebP
@@ -136,8 +136,8 @@ export default function AlbumFolder({
           >
             <span className="folder-lid-sheen" />
             <span className="folder-hint">
-              <span className="big">📁</span>
-              正在打开记忆相册…
+              <span className="big">🗂️</span>
+              正在打开影像资产库…
             </span>
           </motion.div>
         </div>

@@ -23,9 +23,16 @@ from services.proactive_service import (
 )
 from services.notification_service import list_notifications, mark_read
 from services.scheduler import start_scheduler
+from services.system_service import build_overview
 from utils.logger import logger
 
-app = FastAPI(title="Personal Memory Agent API")
+app = FastAPI(
+    title="Multimodal Image Knowledge Management Agent API",
+    description=(
+        "多模态影像知识管理智能体："
+        "自动化解析管线（EXIF + 视觉理解 + 人脸聚类）→ 结构化记忆沉淀 → 跨影像语义问答"
+    ),
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -84,7 +91,17 @@ start_scheduler()
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "service": "personal-memory-agent"}
+    return {"status": "ok", "service": "multimodal-image-knowledge-agent"}
+
+
+@app.get("/api/system/overview")
+def system_overview_api(db: Session = Depends(get_db)):
+    """
+    系统概览：影像资产、知识沉淀、记忆来源、模型端点与处理管线指标。
+
+    全部为实时计算值，供控制台展示；不含任何预置的静态数据。
+    """
+    return build_overview(db)
 
 
 @app.post("/api/photo/upload")

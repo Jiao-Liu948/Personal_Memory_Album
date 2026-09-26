@@ -12,7 +12,7 @@ export default function FolderFab({ count, onClick }: Props) {
     <motion.button
       className="fab"
       onClick={onClick}
-      aria-label="打开我的记忆相册"
+      aria-label="打开影像资产库"
       initial={{ opacity: 0, y: 70, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 70, scale: 0.9 }}
@@ -37,9 +37,9 @@ export default function FolderFab({ count, onClick }: Props) {
         {count > 0 && <span className="fab-badge">{count}</span>}
       </span>
       <span className="fab-text">
-        <span className="fab-label">我的相册</span>
+        <span className="fab-label">影像资产库</span>
         <span className="fab-count">
-          {count > 0 ? `${count} 张照片 · 点击展开` : '还没有照片 · 点击上传'}
+          {count > 0 ? `${count} 项资产 · 点击展开` : '暂无资产 · 点击导入'}
         </span>
       </span>
     </motion.button>

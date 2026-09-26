@@ -80,7 +80,7 @@ export default function PhotoTile({ photo, index, onOpen, onRename }: Props) {
           </span>
           <img src={imgUrl(photo.image_url)} alt={name} loading="lazy" />
           <div className="photo-veil">
-            <span>💬 打开记忆对话</span>
+            <span>💬 打开影像问答</span>
             <button
               className="photo-rename-btn"
               title="为这张照片命名"

@@ -206,16 +206,16 @@ export default function PhotoMemory({
           )}
         </aside>
 
-        {/* 右侧：和这张照片的对话 */}
+        {/* 右侧：针对单张影像的知识问答 */}
         <section className="panel chat-panel">
-          <div className="panel-head">💬 和这张照片聊聊</div>
+          <div className="panel-head">💬 影像问答</div>
           <div className="chat-scroll" ref={scrollRef}>
             {chatHistory.length === 0 ? (
               <div className="center-empty">
                 <div className="em">💬</div>
-                <div style={{ fontWeight: 700 }}>开始和这张照片对话吧</div>
+                <div style={{ fontWeight: 700 }}>开始就这张影像提问</div>
                 <p className="side-empty" style={{ marginTop: 8 }}>
-                  问我这张照片里有什么，或者讲讲它背后的故事，我会帮你记住。
+                  可以问画面里有什么，也可以补充它背后的信息——口述内容会被抽取为结构化记忆。
                 </p>
               </div>
             ) : (

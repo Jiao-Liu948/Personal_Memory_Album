@@ -80,3 +80,45 @@ export interface NotificationFeed {
   unread_count: number;
   total: number;
 }
+
+// ============ 系统概览（控制台指标，后端实时计算） ============
+export interface ModelBinding {
+  name: string;
+  base_url: string;
+  configured: boolean;
+}
+
+export interface PipelineStage {
+  stage: string;
+  value: number;
+  unit: string;
+}
+
+export interface SystemOverview {
+  assets: {
+    total: number;
+    parsed: number;
+    pending: number;
+    failed: number;
+    parse_rate: number;
+  };
+  knowledge: {
+    persons: number;
+    facts: number;
+    tags: number;
+    locations: number;
+    linked_photos: number;
+  };
+  sources: { source: string; count: number }[];
+  top_tags: { tag: string; count: number }[];
+  top_locations: { location: string; count: number }[];
+  timeline: { date: string; count: number }[];
+  pipeline: PipelineStage[];
+  models: Record<'chat' | 'vision' | 'embedding', ModelBinding>;
+  capabilities: {
+    vector_search: boolean;
+    face_cluster: boolean;
+    proactive: boolean;
+  };
+  generated_at: string;
+}
