@@ -4,16 +4,19 @@
 
 import { motion } from 'framer-motion';
 import type { PhotoItem } from '@/app/types';
-import { imgUrl, formatDate } from '@/app/api';
+import { imgUrl, formatDate, photoName } from '@/app/api';
 
 interface Props {
   photo: PhotoItem;
   index: number;
   onOpen: (photoId: string) => void;
+  onRename: (photoId: string) => void;
 }
 
-export default function PhotoTile({ photo, index, onOpen }: Props) {
+export default function PhotoTile({ photo, index, onOpen, onRename }: Props) {
   const ok = photo.parse_status === 'success';
+  const name = photoName(photo);
+  const custom = (photo.display_name || '').trim();
 
   return (
     <motion.div
@@ -33,14 +36,25 @@ export default function PhotoTile({ photo, index, onOpen }: Props) {
         <span className={`photo-badge ${ok ? 'photo-badge--ok' : 'photo-badge--wait'}`}>
           {ok ? '✓ 已解析' : '◷ 解析中'}
         </span>
-        <img src={imgUrl(photo.image_url)} alt={photo.file_name} loading="lazy" />
+        <img src={imgUrl(photo.image_url)} alt={name} loading="lazy" />
         <div className="photo-veil">
           <span>💬 打开记忆对话</span>
+          <button
+            className="photo-rename-btn"
+            title="为这张照片命名"
+            aria-label="为这张照片命名"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRename(photo.photo_id);
+            }}
+          >
+            ✏️
+          </button>
         </div>
       </div>
       <div className="photo-meta">
-        <div className="photo-name" title={photo.file_name}>
-          {photo.file_name}
+        <div className={`photo-name ${custom ? 'photo-name--custom' : ''}`} title={name}>
+          {name}
         </div>
         <div className="photo-date">📅 {photo.upload_time ? formatDate(photo.upload_time) : '暂无日期'}</div>
       </div>

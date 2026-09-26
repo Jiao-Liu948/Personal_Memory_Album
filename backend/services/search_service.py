@@ -310,6 +310,7 @@ def hybrid_search(
             photos[p.photo_id] = {
                 "photo_id": p.photo_id,
                 "file_name": p.file_name,
+                "display_name": p.display_name or "",
                 "upload_time": p.upload_time.isoformat() if p.upload_time else "",
                 "image_url": f"/api/photo/image/{p.photo_id}",
                 "vision": p.vision_analysis or {}

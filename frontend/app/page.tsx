@@ -207,6 +207,27 @@ export default function Home() {
     }
   };
 
+  // 为照片命名。不传 name 表示从相册卡片快捷入口进入，用 prompt 收集输入。
+  const renamePhoto = async (photoId: string, name?: string) => {
+    let finalName = name;
+    if (finalName === undefined) {
+      const current = photoList.find((p) => p.photo_id === photoId);
+      const preset = (current?.display_name || '').trim() || current?.file_name || '';
+      const input = prompt('为这张照片起个名字（留空则恢复显示原始文件名）', preset);
+      if (input === null) return; // 用户取消
+      finalName = input;
+    }
+    try {
+      await axios.put(
+        `${API_BASE}/api/photo/rename?photo_id=${photoId}&name=${encodeURIComponent(finalName.trim())}`,
+      );
+      await loadPhotoList(); // 相册、详情标题、引用缩略图都依赖列表里的名称
+    } catch (err) {
+      console.error('照片命名失败', err);
+      alert(describeApiError(err));
+    }
+  };
+
   const renamePerson = async (personId: string) => {
     const newName = prompt('请输入新的人物名称');
     if (!newName?.trim()) return;
@@ -265,6 +286,7 @@ export default function Home() {
             onClose={() => setAlbumOpen(false)}
             onOpenPhoto={openPhoto}
             onUpload={handleUpload}
+            onRenamePhoto={renamePhoto}
           />
         )}
       </AnimatePresence>
@@ -313,6 +335,7 @@ export default function Home() {
             onInputChange={setInputText}
             onSend={sendPhotoMessage}
             onRenamePerson={renamePerson}
+            onRenamePhoto={renamePhoto}
             onOpenPhoto={openPhoto}
             onClose={closePhoto}
           />

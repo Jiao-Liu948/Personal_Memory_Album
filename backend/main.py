@@ -6,12 +6,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from config import settings
 from db.database import get_db
+from db.migrate import ensure_schema
 from db.models import Photo, EpisodeMemory
 from services.memory_service import get_photo_memory_facts, extract_memory_from_vision
 from services.face_service import detect_and_cluster_faces, get_photo_persons, rename_person, merge_similar_persons
 from services.vision_service import parse_exif, analyze_photo_content
 from services.chat_service import chat_with_photo, generate_opening_message
-from services.photo_service import get_photo_detail, get_photo_image_path, get_photos_by_person
+from services.photo_service import (
+    get_photo_detail, get_photo_image_path, get_photos_by_person, rename_photo
+)
 from services.search_service import hybrid_search
 from services.global_chat_service import global_chat, get_global_history, clear_global_history
 from services.proactive_service import (
@@ -33,6 +36,9 @@ app.add_middleware(
 )
 
 os.makedirs(settings.STORAGE_ROOT, exist_ok=True)
+
+# 增量迁移：为已存在的库补齐新增字段（幂等，不会清数据）
+ensure_schema()
 
 
 # ==================== 启动自检：模型端点 ====================
@@ -168,12 +174,27 @@ def get_photo_list(db: Session = Depends(get_db)):
         {
             "photo_id": p.photo_id,
             "file_name": p.file_name,
+            "display_name": p.display_name or "",
             "upload_time": p.upload_time.isoformat() if p.upload_time else "",
             "parse_status": p.parse_status,
             "image_url": f"/api/photo/image/{p.photo_id}"
         }
         for p in photos
     ]
+
+
+@app.put("/api/photo/rename")
+def rename_photo_api(photo_id: str, name: str, db: Session = Depends(get_db)):
+    """
+    为照片命名（用户自定义名称）。
+
+    name 传空字符串表示清除自定义名称，展示时回退到原始文件名。
+    只影响 display_name，不动 file_name（原始文件名保留用于溯源）。
+    """
+    success = rename_photo(db, photo_id, name)
+    if not success:
+        raise HTTPException(status_code=404, detail="照片不存在")
+    return {"status": "success", "photo_id": photo_id, "display_name": (name or "").strip()}
 
 
 @app.get("/api/photo/detail")

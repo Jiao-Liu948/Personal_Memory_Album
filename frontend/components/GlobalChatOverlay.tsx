@@ -5,7 +5,7 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { ChatMessage, PhotoItem } from '@/app/types';
-import { imgUrl } from '@/app/api';
+import { imgUrl, photoName } from '@/app/api';
 import MessageBubble from './MessageBubble';
 import Typing from './Typing';
 
@@ -103,9 +103,9 @@ export default function GlobalChatOverlay({
                       key={p.photo_id}
                       className="mini-thumb"
                       onClick={() => onOpenPhoto(p.photo_id)}
-                      title={p.file_name}
+                      title={photoName(p)}
                     >
-                      <img src={imgUrl(p.image_url)} alt={p.file_name} loading="lazy" />
+                      <img src={imgUrl(p.image_url)} alt={photoName(p)} loading="lazy" />
                     </div>
                   ))}
                 </div>

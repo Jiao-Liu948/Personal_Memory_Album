@@ -12,6 +12,7 @@ interface Props {
   onClose: () => void;
   onOpenPhoto: (photoId: string) => void;
   onUpload: (file: File) => void;
+  onRenamePhoto: (photoId: string) => void;
 }
 
 export default function AlbumFolder({
@@ -21,6 +22,7 @@ export default function AlbumFolder({
   onClose,
   onOpenPhoto,
   onUpload,
+  onRenamePhoto,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -110,7 +112,13 @@ export default function AlbumFolder({
             ) : (
               <div className="folder-grid">
                 {photos.map((p, i) => (
-                  <PhotoTile key={p.photo_id} photo={p} index={i} onOpen={onOpenPhoto} />
+                  <PhotoTile
+                    key={p.photo_id}
+                    photo={p}
+                    index={i}
+                    onOpen={onOpenPhoto}
+                    onRename={onRenamePhoto}
+                  />
                 ))}
               </div>
             )}

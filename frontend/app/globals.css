@@ -906,6 +906,8 @@ a {
   transition: opacity 0.26s ease;
   display: flex;
   align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
   padding: 11px;
 }
 .photo:hover .photo-veil {
@@ -918,6 +920,24 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+/* 相册卡片 hover 上的快捷命名按钮 */
+.photo-rename-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.photo-rename-btn:hover {
+  background: var(--violet);
+  transform: scale(1.08);
 }
 .photo-meta {
   padding: 10px 12px;
@@ -1056,8 +1076,87 @@ a {
   font-size: 13px;
   font-weight: 650;
   overflow: hidden;
+}
+
+/* ============ 照片命名（详情弹层内联编辑） ============ */
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.name-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.name-edit-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.name-edit-btn:hover {
+  background: var(--violet);
+  transform: scale(1.08);
+}
+.name-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.name-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--pill);
+  border: 1px solid var(--border-strong);
+  background: rgba(10, 7, 30, 0.78);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.name-input::placeholder {
+  color: var(--text-3);
+}
+.name-input:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+.name-btn {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 650;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.name-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+.name-btn--ok {
+  background: var(--grad-aurora);
+}
+.name-btn--ok:hover {
+  box-shadow: var(--glow-violet);
+}
+/* 已自定义命名的照片，标题用高亮色区分于原始文件名 */
+.photo-name--custom {
+  color: #c4b5fd;
 }
 
 .side-card {

@@ -3,6 +3,8 @@
 export interface PhotoItem {
   photo_id: string;
   file_name: string;
+  /** 用户自定义名称；为空时展示 file_name */
+  display_name?: string;
   upload_time: string;
   parse_status: string;
   image_url: string;
