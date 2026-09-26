@@ -101,6 +101,7 @@ def recommend_similar_photos(db: Session, photo_id: str, top_k: int = 5, user_id
         {
             "photo_id": p.photo_id,
             "file_name": p.file_name,
+            "display_name": p.display_name or "",
             "upload_time": p.upload_time.isoformat() if p.upload_time else "",
             "image_url": f"/api/photo/image/{p.photo_id}",
             "vision": p.vision_analysis or {}
@@ -288,6 +289,7 @@ def generate_yearly_recap(db: Session, year: int = None, user_id: str = "default
             {
                 "photo_id": p.photo_id,
                 "file_name": p.file_name,
+                "display_name": p.display_name or "",
                 "upload_time": p.upload_time.isoformat() if p.upload_time else "",
                 "image_url": f"/api/photo/image/{p.photo_id}"
             }

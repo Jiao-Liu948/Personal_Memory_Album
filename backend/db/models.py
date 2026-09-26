@@ -23,6 +23,7 @@ class Photo(Base):
     user_id = Column(String(64), nullable=False, index=True, comment="所属用户ID")
     file_path = Column(Text, nullable=False, comment="本地文件路径")
     file_name = Column(String(255), nullable=False, comment="原始文件名")
+    display_name = Column(String(255), default="", comment="用户自定义名称；为空时展示原始文件名")
     upload_time = Column(DateTime, default=datetime.now, comment="上传时间")
     is_valid = Column(Boolean, default=True, comment="是否有效")
     exif_info = Column(JSON, comment="EXIF原始信息JSON")

@@ -46,13 +46,24 @@ INTENT_PROMPT = """
 你是一个问题意图解析器。根据用户的问题，判断问题类型并提取检索条件。
 严格输出JSON，不要多余文字：
 {{
-    "intent": "问题类型，可选：recall(回溯回忆)/statistic(统计数量)/compare(对比)/relation(人物关系)/general(普通聊天)",
+    "intent": "recall | statistic | compare | relation | general",
     "query": "用于语义检索的核心查询词，去掉疑问词",
     "person_names": ["问题中提到的人名，没有则空数组"],
     "location": "问题中提到的地点，没有则空字符串",
     "time_keyword": "问题中提到的时间关键词，如'去年''生日''2023年'，没有则空字符串",
-    "tags": ["问题中隐含的事件标签，如'旅行''聚会''生日'，没有则空数组"]
+    "tags": ["问题中隐含的事件标签，如'旅行''聚会''生日'，没有则空数组"],
+    "time_order": "earliest | latest | none。问'第一次/最早/最初'填 earliest；问'最近/上次/最后一次'填 latest；其余填 none"
 }}
+
+intent 判定规则（按顺序判断）：
+1. statistic —— 统计数量（几次、多少、几个）
+2. compare   —— 对比（有什么不同、变化）
+3. relation  —— 人物关系（谁、和谁）
+4. recall    —— 询问用户本人任何信息的回溯性问题：人物、地点、事件、物品、状态、偏好。
+   **即使是现在时提问，只要问的是用户自己的情况，就属于 recall**，
+   例如「我现在在哪个健身房？」「我的狗叫什么？」「我住哪儿？」。
+5. general   —— 仅限与用户个人记忆完全无关的寒暄闲聊，例如「你好」「你是谁」「谢谢」。
+   **拿不准时不要填 general，一律按 recall 处理。**
 
 用户问题：{user_query}
 输出JSON：
@@ -67,16 +78,21 @@ def _parse_intent(user_query: str) -> dict:
         content = response.content.strip()
         if content.startswith("```json"):
             content = content[7:-3].strip()
-        return json.loads(content)
+        parsed = json.loads(content)
+        # time_order 兜底：模型可能漏字段或给出非预期值
+        if parsed.get("time_order") not in ("earliest", "latest"):
+            parsed["time_order"] = "none"
+        return parsed
     except Exception as e:
         logger.warning(f"[global_chat] 意图解析失败: {str(e)}")
         return {
-            "intent": "general",
+            "intent": "recall",   # 解析失败时按 recall 处理，宁可多检索也不要漏答
             "query": user_query,
             "person_names": [],
             "location": "",
             "time_keyword": "",
-            "tags": []
+            "tags": [],
+            "time_order": "none",
         }
 
 
@@ -134,7 +150,7 @@ def global_chat(db: Session, user_query: str) -> dict:
     # 2. 人名转人物ID
     person_ids = _name_to_person_ids(db, intent_info.get("person_names", []))
 
-    # 3. 双引擎检索（把已解析出的意图传下去，由它决定权重或是否跳过召回）
+    # 3. 双引擎检索（把已解析出的意图传下去，由它决定权重、是否跳过召回、是否按时序重排）
     search_result = hybrid_search(
         db,
         query=intent_info.get("query", user_query),
@@ -144,6 +160,7 @@ def global_chat(db: Session, user_query: str) -> dict:
         tags=intent_info.get("tags") or None,
         top_k=15,
         intent=intent_info.get("intent"),
+        time_order=intent_info.get("time_order"),
     )
 
     facts = search_result.get("facts", [])

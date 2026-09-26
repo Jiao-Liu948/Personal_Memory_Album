@@ -13,6 +13,10 @@ axios.defaults.timeout = 90000;
 // 把后端返回的相对图片路径转成可直接加载的完整 URL
 export const imgUrl = (url: string) => `${API_BASE}${url}`;
 
+// 照片展示名：优先用户自定义名称，没有则回退到原始文件名
+export const photoName = (p: { display_name?: string; file_name?: string }) =>
+  (p.display_name || '').trim() || p.file_name || '照片';
+
 // 把请求异常翻译成可读提示（把后端的 500 detail 原样带出来，便于定位模型配置问题）
 export function describeApiError(err: unknown): string {
   if (axios.isAxiosError(err)) {

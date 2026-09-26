@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { PhotoItem, MemoryFact, Person, ChatMessage } from '@/app/types';
-import { imgUrl, tagClass } from '@/app/api';
+import { imgUrl, tagClass, photoName } from '@/app/api';
 import MessageBubble from './MessageBubble';
 import Typing from './Typing';
 
@@ -21,6 +21,7 @@ interface Props {
   onInputChange: (v: string) => void;
   onSend: () => void;
   onRenamePerson: (personId: string) => void;
+  onRenamePhoto: (photoId: string, name?: string) => void;
   onOpenPhoto: (photoId: string) => void;
   onClose: () => void;
 }
@@ -45,10 +46,26 @@ export default function PhotoMemory({
   onInputChange,
   onSend,
   onRenamePerson,
+  onRenamePhoto,
   onOpenPhoto,
   onClose,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+
+  const displayName = photoName(photo || { file_name: '照片' });
+
+  const startEditName = () => {
+    // 预填当前自定义名；没自定义过就预填原始文件名，方便直接改
+    setNameDraft((photo?.display_name || '').trim() || photo?.file_name || '');
+    setEditingName(true);
+  };
+
+  const submitName = () => {
+    onRenamePhoto(photoId, nameDraft.trim());
+    setEditingName(false);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -85,8 +102,45 @@ export default function PhotoMemory({
         {/* 左侧：照片 + 记忆 + 人物 + 相似 */}
         <aside style={{ minWidth: 0 }}>
           <div className="memory-photo">
-            <img src={imgUrl(`/api/photo/image/${photoId}`)} alt={photo?.file_name || '照片'} />
-            <div className="memory-photo-cap">{photo?.file_name || '照片'}</div>
+            <img src={imgUrl(`/api/photo/image/${photoId}`)} alt={displayName} />
+            <div className="memory-photo-cap" onClick={(e) => e.stopPropagation()}>
+              {editingName ? (
+                <div className="name-edit">
+                  <input
+                    className="name-input"
+                    value={nameDraft}
+                    autoFocus
+                    maxLength={60}
+                    placeholder="给这张照片起个名字…"
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') submitName();
+                      if (e.key === 'Escape') setEditingName(false);
+                    }}
+                  />
+                  <button className="name-btn name-btn--ok" onClick={submitName}>
+                    保存
+                  </button>
+                  <button className="name-btn" onClick={() => setEditingName(false)}>
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <div className="name-row">
+                  <span className="name-text" title={displayName}>
+                    {displayName}
+                  </span>
+                  <button
+                    className="name-edit-btn"
+                    title="为这张照片命名"
+                    aria-label="为这张照片命名"
+                    onClick={startEditName}
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="side-card">
@@ -142,9 +196,9 @@ export default function PhotoMemory({
                     key={p.photo_id}
                     className="mini-thumb"
                     onClick={() => onOpenPhoto(p.photo_id)}
-                    title={p.file_name}
+                    title={photoName(p)}
                   >
-                    <img src={imgUrl(p.image_url)} alt={p.file_name} loading="lazy" />
+                    <img src={imgUrl(p.image_url)} alt={photoName(p)} loading="lazy" />
                   </div>
                 ))}
               </div>
@@ -152,16 +206,16 @@ export default function PhotoMemory({
           )}
         </aside>
 
-        {/* 右侧：和这张照片的对话 */}
+        {/* 右侧：针对单张影像的知识问答 */}
         <section className="panel chat-panel">
-          <div className="panel-head">💬 和这张照片聊聊</div>
+          <div className="panel-head">💬 影像问答</div>
           <div className="chat-scroll" ref={scrollRef}>
             {chatHistory.length === 0 ? (
               <div className="center-empty">
                 <div className="em">💬</div>
-                <div style={{ fontWeight: 700 }}>开始和这张照片对话吧</div>
+                <div style={{ fontWeight: 700 }}>开始就这张影像提问</div>
                 <p className="side-empty" style={{ marginTop: 8 }}>
-                  问我这张照片里有什么，或者讲讲它背后的故事，我会帮你记住。
+                  可以问画面里有什么，也可以补充它背后的信息——口述内容会被抽取为结构化记忆。
                 </p>
               </div>
             ) : (

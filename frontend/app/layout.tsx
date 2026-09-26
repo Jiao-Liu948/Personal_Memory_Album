@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "记忆相册 · Personal Memory Agent",
-  description: "以照片为载体、以结构化记忆与跨场景推理为核心的个人记忆智能体",
+  title: "影像知识管理 · Multimodal Knowledge Agent",
+  description: "多模态影像知识管理智能体：自动化解析管线、结构化记忆沉淀与跨影像语义问答",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

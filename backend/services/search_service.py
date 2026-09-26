@@ -55,6 +55,36 @@ def _normalize_vector_score(distance) -> float:
     return max(0.0, min(1.0, 1.0 - float(distance)))
 
 
+def _parse_fact_datetime(fact: dict):
+    """
+    从记忆里解析出可比较的日期，用于时序重排。
+
+    memory_fact.time_info 是自由文本（"2019年国庆"、"2024:07:14 00:05:08"、"去年暑假"），
+    这里复用 proactive_service 已有的多格式解析器（纪念日检测用的就是它）。
+
+    兜底：像「2019年国庆」这种只给年份的表述，该解析器拿不到月份，
+    这里退化为当年 1 月 1 日 —— 只用于排序，不用于对外展示。
+    完全无时间信息的返回 None，调用方单独处理。
+    """
+    import re
+    from datetime import datetime
+
+    from services.proactive_service import _parse_date_from_text
+
+    text = f"{fact.get('time_info') or ''} {fact.get('event') or ''}"
+    try:
+        parsed = _parse_date_from_text(text)
+    except Exception:
+        parsed = None
+    if parsed is not None:
+        return parsed
+
+    match = re.search(r"(?:19|20)\d{2}", text)
+    if match:
+        return datetime(int(match.group(0)), 1, 1)
+    return None
+
+
 def vector_search(db: Session, query: str, top_k: int = 10, user_id: str = "default_user") -> list:
     """纯向量语义检索"""
     results = query_similar_facts(query, top_k=top_k, user_id=user_id)
@@ -218,6 +248,7 @@ def hybrid_search(
     top_k: int = 15,
     user_id: str = "default_user",
     intent: str = None,
+    time_order: str = None,
 ) -> dict:
     """
     双层召回融合检索：向量语义 + 实体匹配，按意图加权统一排序。
@@ -296,6 +327,38 @@ def hybrid_search(
     # 综合分降序；同分时实体命中更多的优先（"实体结果优先"）
     results.sort(key=lambda x: (x["final_score"], x["entity_score"]), reverse=True)
 
+    # 时序重排：查询问的是「第一次/最早」或「最近/上次」时，用户要的是时间维度的答案。
+    #
+    # 关键设计：时间只在「相关度同档」的候选之间起决定作用，绝不覆盖相关度本身。
+    # 实测教训：早期版本对整个候选池按时间排序，结果「上次吃火锅是在哪家店」的正确记忆
+    # 本排第 2（0.376），却被一堆 2025 年但毫不相关的记忆（0.22）靠"时间更晚"挤出了 Top-8。
+    # 而「第一次一起玩」那种场景，正确答案与前几名差距只有 0.03，同档内按时序排正好能纠正。
+    if time_order in ("earliest", "latest"):
+        pool_size = max(top_k * 2, 8)
+        pool = results[:pool_size]
+        BAND = 0.05  # 相关度档宽
+
+        ordered, i = [], 0
+        while i < len(pool):
+            band_key = int(pool[i]["final_score"] / BAND)
+            band = []
+            while i < len(pool) and int(pool[i]["final_score"] / BAND) == band_key:
+                band.append(pool[i])
+                i += 1
+
+            dated, undated = [], []
+            for item in band:
+                dt = _parse_fact_datetime(item)
+                if dt is None:
+                    undated.append(item)      # 解析不出时间的排在有时序的之后
+                else:
+                    dated.append((dt, item))
+            dated.sort(key=lambda pair: pair[0], reverse=(time_order == "latest"))
+            ordered.extend(item for _, item in dated)
+            ordered.extend(undated)
+
+        results = ordered + results[pool_size:]
+
     top_results = results[:top_k]
 
     # ---------- 补充关联照片 / 人物详情（只针对最终返回的结果） ----------
@@ -310,6 +373,7 @@ def hybrid_search(
             photos[p.photo_id] = {
                 "photo_id": p.photo_id,
                 "file_name": p.file_name,
+                "display_name": p.display_name or "",
                 "upload_time": p.upload_time.isoformat() if p.upload_time else "",
                 "image_url": f"/api/photo/image/{p.photo_id}",
                 "vision": p.vision_analysis or {}
@@ -328,6 +392,7 @@ def hybrid_search(
     return {
         "query": query,
         "intent": intent,
+        "time_order": time_order if time_order in ("earliest", "latest") else "none",
         "skipped": False,
         "total": len(results),
         "vector_count": len(vector_items),

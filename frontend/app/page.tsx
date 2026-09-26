@@ -4,8 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { AnimatePresence } from 'framer-motion';
 import { API_BASE, describeApiError } from './api';
-import type { PhotoItem, MemoryFact, Person, ChatMessage, AppNotification } from './types';
-import IntroStage from '@/components/IntroStage';
+import type {
+  PhotoItem,
+  MemoryFact,
+  Person,
+  ChatMessage,
+  AppNotification,
+  SystemOverview as Overview,
+} from './types';
+import SystemOverview from '@/components/SystemOverview';
 import FolderFab from '@/components/FolderFab';
 import AlbumFolder from '@/components/AlbumFolder';
 import GlobalChatOverlay from '@/components/GlobalChatOverlay';
@@ -41,6 +48,9 @@ export default function Home() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifyOpen, setNotifyOpen] = useState(false);
 
+  // ===== 系统概览（控制台指标，后端实时计算）=====
+  const [overview, setOverview] = useState<Overview | null>(null);
+
   const currentPhoto = photoList.find((p) => p.photo_id === activePhotoId);
 
   // ---------- 数据加载 ----------
@@ -74,13 +84,23 @@ export default function Home() {
     }
   }, []);
 
+  const loadOverview = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/system/overview`);
+      setOverview(res.data ?? null);
+    } catch (err) {
+      console.error('加载系统概览失败', err);
+    }
+  }, []);
+
   useEffect(() => {
-    // 首次进入时并行拉取相册 / 主动提醒 / 历史问答；
+    // 首次进入时并行拉取相册 / 主动提醒 / 历史问答 / 系统概览；
     // 各 loader 内的 setState 都在 await 之后，属于异步加载而非同步级联渲染。
     loadPhotoList();
     loadNotifications();
     loadGlobalHistory();
-  }, [loadPhotoList, loadNotifications, loadGlobalHistory]);
+    loadOverview();
+  }, [loadPhotoList, loadNotifications, loadGlobalHistory, loadOverview]);
 
   // 提醒由后端调度器异步产出，前端定时轮询即可（红点不要求秒级实时）
   useEffect(() => {
@@ -99,6 +119,7 @@ export default function Home() {
       await axios.post(`${API_BASE}/api/photo/upload`, formData, { timeout: 300000 });
       await loadPhotoList();
       await loadNotifications(); // 新照片可能带来新的纪念日提醒
+      await loadOverview(); // 新资产会改变控制台指标
     } catch (err) {
       console.error('上传失败', err);
       alert(describeApiError(err));
@@ -207,6 +228,27 @@ export default function Home() {
     }
   };
 
+  // 为照片命名。不传 name 表示从相册卡片快捷入口进入，用 prompt 收集输入。
+  const renamePhoto = async (photoId: string, name?: string) => {
+    let finalName = name;
+    if (finalName === undefined) {
+      const current = photoList.find((p) => p.photo_id === photoId);
+      const preset = (current?.display_name || '').trim() || current?.file_name || '';
+      const input = prompt('为这张照片起个名字（留空则恢复显示原始文件名）', preset);
+      if (input === null) return; // 用户取消
+      finalName = input;
+    }
+    try {
+      await axios.put(
+        `${API_BASE}/api/photo/rename?photo_id=${photoId}&name=${encodeURIComponent(finalName.trim())}`,
+      );
+      await loadPhotoList(); // 相册、详情标题、引用缩略图都依赖列表里的名称
+    } catch (err) {
+      console.error('照片命名失败', err);
+      alert(describeApiError(err));
+    }
+  };
+
   const renamePerson = async (personId: string) => {
     const newName = prompt('请输入新的人物名称');
     if (!newName?.trim()) return;
@@ -233,22 +275,22 @@ export default function Home() {
             <div className="brand">
               <div className="brand-mark">✦</div>
               <div>
-                <div className="brand-name">记忆相册</div>
-                <div className="brand-tag">Personal Memory Agent</div>
+                <div className="brand-name">影像知识管理</div>
+                <div className="brand-tag">Multimodal Knowledge Agent</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <NotificationBell unread={unreadCount} onClick={openNotifications} />
               <button className="btn btn-glass btn-sm" onClick={openGlobalChat}>
-                🧠 全局记忆问答
+                🧠 跨影像知识问答
               </button>
             </div>
           </div>
         </header>
 
         <main style={{ flex: 1 }}>
-          <IntroStage
-            photoCount={photoList.length}
+          <SystemOverview
+            overview={overview}
             onOpenAlbum={() => setAlbumOpen(true)}
             onOpenGlobalChat={openGlobalChat}
           />
@@ -265,6 +307,7 @@ export default function Home() {
             onClose={() => setAlbumOpen(false)}
             onOpenPhoto={openPhoto}
             onUpload={handleUpload}
+            onRenamePhoto={renamePhoto}
           />
         )}
       </AnimatePresence>
@@ -313,6 +356,7 @@ export default function Home() {
             onInputChange={setInputText}
             onSend={sendPhotoMessage}
             onRenamePerson={renamePerson}
+            onRenamePhoto={renamePhoto}
             onOpenPhoto={openPhoto}
             onClose={closePhoto}
           />

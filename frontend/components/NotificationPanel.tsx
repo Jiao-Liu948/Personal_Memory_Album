@@ -4,7 +4,7 @@
 
 import { motion } from 'framer-motion';
 import type { AppNotification, Anniversary, YearlyRecap } from '@/app/types';
-import { imgUrl } from '@/app/api';
+import { imgUrl, photoName } from '@/app/api';
 
 interface PanelProps {
   notifications: AppNotification[];
@@ -60,8 +60,8 @@ function YearlyRecapBody({ payload, onOpenPhoto }: { payload: YearlyRecap; onOpe
       {(payload.photos ?? []).length > 0 && (
         <div className="refs-strip" style={{ marginTop: 12 }}>
           {payload.photos.slice(0, 8).map((p) => (
-            <div key={p.photo_id} className="mini-thumb" onClick={() => onOpenPhoto(p.photo_id)} title={p.file_name}>
-              <img src={imgUrl(p.image_url)} alt={p.file_name} loading="lazy" />
+            <div key={p.photo_id} className="mini-thumb" onClick={() => onOpenPhoto(p.photo_id)} title={photoName(p)}>
+              <img src={imgUrl(p.image_url)} alt={photoName(p)} loading="lazy" />
             </div>
           ))}
         </div>
