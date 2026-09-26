@@ -1,37 +1,71 @@
-# Personal Memory Agent · 个人记忆智能体
+# 多模态影像知识管理 Agent
 
-基于照片的个人记忆管理智能体。上传照片后自动解析画面、识别人物、抽取结构化记忆，支持单照片对话、全局跨照片检索问答、纪念日与年度回忆主动提醒。
+把零散的影像资料转化为**可检索、可推理、可追溯的结构化知识资产**。
+
+影像入库即自动完成元数据解析、视觉理解与人脸聚类；对话中口述的事实被抽取为长期结构化记忆；并以**实体匹配 + 语义向量双引擎**支撑跨影像的自然语言问答。主动能力（纪念日提醒、年度回忆）由后端调度器按事件驱动，前端只做被动展示。
 
 ---
 
 ## 目录
 
-- [核心功能](#核心功能)
+- [核心能力](#核心能力)
+- [系统架构](#系统架构)
 - [技术栈](#技术栈)
 - [项目结构](#项目结构)
 - [快速开始](#快速开始)
 - [核心流程](#核心流程)
+- [前端界面](#前端界面)
 - [API 概览](#api-概览)
 - [数据模型](#数据模型)
+- [指标度量](#指标度量)
 - [评测体系](#评测体系)
 - [数据备份与迁移](#数据备份与迁移)
 - [常见问题](#常见问题)
 
 ---
 
-## 核心功能
+## 核心能力
 
 | 模块 | 能力 |
 |---|---|
-| 照片解析 | EXIF 元数据（exifread）+ 多模态视觉模型分析画面 + InsightFace 人脸检测聚类 |
-| 记忆抽取 | 从视觉解析与对话中抽取「时间/地点/事件/人物关系/情感/标签」六字段事实记忆 |
+| 影像解析 | EXIF 元数据（exifread）+ 多模态视觉理解 + InsightFace 人脸检测聚类，聚类后自动合并重复人物 |
+| 影像命名 | 用户自定义名称（`photo.display_name`），原始文件名保留用于溯源；支持随时清空回退 |
+| 结构化记忆 | 从视觉结果与对话中抽取「时间 / 地点 / 事件 / 人物关系 / 情感 / 标签」六维事实记忆 |
 | 冲突消解 | 三层策略：向量粗筛直接合并 → LLM 裁决（skip/add/merge/archive）→ 记忆精炼防冗长 |
-| 单照片对话 | 带记忆上下文问答，历史超 20 条自动压缩为摘要，对话中持续抽取新记忆 |
-| 全局问答 | 意图解析 → 双引擎检索（向量语义 + 实体过滤）→ LLM 综合回答，标注引用照片 |
-| 主动交互 | 信息补全提示、相似照片推荐、纪念日提醒、年度回忆生成 |
-| 提醒调度 | 后台守护线程每 6 小时判定，单实例锁防多 worker 重复，通知中心幂等去重 |
-| 人物管理 | 自动聚类、改名（后台同步关联记忆并重建向量）、合并相似人物 |
-| 评测体系 | 四维 80 条合成数据集评测，Judge 评分 + 基线对比 + 20% 人工抽检 |
+| 双引擎检索 | 实体匹配度打分 + 向量分数归一化，按查询意图加权融合排序 |
+| 时序意图重排 | 「第一次 / 最早 / 最近 / 上次」类查询，在相关度同档位内按时序重排 |
+| 单影像问答 | 带记忆上下文的多轮对话，历史超 20 条自动摘要压缩，对话中持续抽取新记忆 |
+| 跨影像问答 | 意图解析 → 融合检索 → LLM 综合回答，标注引用照片 |
+| 主动提醒 | 纪念日提醒 + 年度回忆，后台调度、幂等去重，前端红点 + 弹窗 |
+| 人物管理 | 自动聚类、自动合并、重命名（异步同步关联记忆并重建向量） |
+| 运行控制台 | 影像资产 / 知识沉淀 / 处理管线 / 模型端点，全部实时计算 |
+| 评测与度量 | 四维 80 条评测体系 + 三项关键指标的可复现度量工具 |
+
+---
+
+## 系统架构
+
+```
+前端交互层   Next.js 16 + React 19 + framer-motion
+             运行控制台 / 影像资产库 / 影像问答 / 跨影像问答 / 主动提醒
+─────────────────────────────────────────────────────────────
+接口层       FastAPI：CORS、参数校验、启动自检、增量迁移、25 个业务端点
+─────────────────────────────────────────────────────────────
+能力层       vision_service     EXIF + 多模态视觉分析
+             face_service       人脸检测聚类 / 自动合并 / 改名传播
+             memory_service     记忆抽取 + 三层冲突消解 + 精炼
+             chat_service       单影像对话 + 开场白 + 上下文压缩
+             search_service     双引擎融合检索 + 时序重排
+             global_chat_service 跨影像意图解析与问答
+             proactive_service  信息补全 / 相似影像 / 纪念日 / 年度回忆
+             notification_service / scheduler  主动提醒与调度
+─────────────────────────────────────────────────────────────
+存储层       MySQL 8（结构化） + Chroma（语义向量） + 本地文件（原图 / 通知 / 对话）
+─────────────────────────────────────────────────────────────
+可观测层     统一日志（控制台 + 按天落盘） + Langfuse 调用链埋点
+```
+
+**关于多用户**：当前为单用户实现（`user_id` 默认 `default_user`），但数据层所有查询均按 `user_id` 过滤，接入团队协作时只需透传该维度，无需改动业务逻辑。
 
 ---
 
@@ -44,9 +78,9 @@
 | 向量库 | Chroma（本地持久化，cosine 距离） |
 | 人脸识别 | InsightFace (buffalo_l, CPU) + OpenCV |
 | 图像处理 | Pillow + exifread |
-| LLM / 视觉 / Embedding | OpenAI 兼容接口（LangChain ChatOpenAI） |
+| LLM / 视觉 / Embedding | OpenAI 兼容接口（LangChain ChatOpenAI），可指向私有化部署端点 |
 | 前端 | Next.js 16 + React 19 + TypeScript + axios + framer-motion |
-| 可观测 | Langfuse |
+| 可观测 | Langfuse（兼容 3.x / 4.x API） |
 | 日志 | 控制台 + 按天文件（backend/logs/app_YYYYMMDD.log） |
 
 ---
@@ -56,35 +90,15 @@
 ```
 personal_memory_agent/
 ├── backend/
-│   ├── main.py               # FastAPI 入口：API 端点 + 启动自检 + 调度器
-│   ├── config.py             # 配置加载（.env）
-│   ├── requirements.txt
-│   ├── .env.example          # 环境变量模板
-│   ├── db/
-│   │   ├── database.py       # SQLAlchemy 引擎 / Session
-│   │   ├── models.py         # 数据模型
-│   │   └── init_db.py        # 建表脚本
-│   ├── services/
-│   │   ├── vision_service.py       # EXIF 解析 + 多模态视觉分析
-│   │   ├── face_service.py         # 人脸检测聚类 / 改名 / 合并
-│   │   ├── memory_service.py       # 记忆抽取 + 冲突消解 + 精炼
-│   │   ├── chat_service.py         # 单照片对话 + 开场白 + 历史压缩
-│   │   ├── global_chat_service.py  # 全局跨照片问答
-│   │   ├── search_service.py       # 双引擎混合搜索
-│   │   ├── vector_service.py       # Chroma 向量增删查
-│   │   ├── photo_service.py        # 照片详情查询
-│   │   ├── proactive_service.py    # 主动交互
-│   │   ├── notification_service.py # 通知中心
-│   │   └── scheduler.py            # 主动提醒调度器
-│   ├── evaluation/           # 四维评测体系
-│   ├── utils/
-│   │   ├── embedding_client.py     # Embedding 客户端
-│   │   ├── langfuse_client.py      # Langfuse 埋点
-│   │   └── logger.py               # 统一日志
+│   ├── main.py
+│   ├── config.py
+│   ├── db/                # ORM、数据库迁移、初始化
+│   ├── services/          # 业务服务层
+│   ├── evaluation/       # 评测套件
+│   └── utils/             # 工具模块
 └── frontend/
-    ├── app/                  # Next.js App Router
-    ├── components/           # UI 组件
-    └── package.json
+    ├── app/
+    └── components/
 ```
 
 ---
@@ -112,8 +126,6 @@ npm install
 
 ### 3. 配置环境变量
 
-复制模板并填写真实值：
-
 ```bash
 # Windows
 copy backend\.env.example backend\.env
@@ -122,17 +134,18 @@ copy backend\.env.example backend\.env
 cp backend/.env.example backend/.env
 ```
 
-backend/.env.example 已标注每个字段的用途，包含 MySQL、对话模型、视觉模型、Embedding、评测裁判模型、Langfuse、存储路径等。字段完整说明见 backend/config.py。
-
+`backend/.env.example` 已标注每个字段用途。需要特别注意的是 **`MODEL_BASE_URL`**：如果使用千问 / 豆包等第三方 OpenAI 兼容接口，必须显式配置，否则会静默回退到 `https://api.openai.com/v1` 导致调用失败。后端启动时会打印端点自检日志。
 
 ### 4. 初始化数据库
+
+**首次使用**（会清空所有表）：
 
 ```bash
 cd backend
 python -m db.init_db
 ```
 
-> 该命令执行 drop_all + create_all，仅首次使用时运行，已有数据时会清空所有表。
+**已有数据的环境**无需重跑该命令：后端启动时会自动执行 `db/migrate.py` 的幂等增量迁移，只为已有表补齐新增字段（如 `photo.display_name`），不会影响既有数据。
 
 ### 5. 启动服务
 
@@ -155,11 +168,11 @@ npm run dev
 npm run build && npm run start
 ```
 
-后端启动时会打印模型端点自检日志并自动启动主动提醒调度器。访问 http://localhost:3000。
+启动后访问 http://localhost:3000 。后端启动时会打印模型端点自检日志并启动主动提醒调度器。
 
 ### 6. 停止服务
 
-后端 / 前端分别 Ctrl+C 终止。如需按端口清理残留进程：
+后端 / 前端分别 Ctrl+C 终止。按端口清理残留进程：
 
 ```bash
 # Windows
@@ -171,9 +184,32 @@ taskkill /F /PID <pid>
 
 ## 核心流程
 
-### 照片上传与记忆流水线
+### 影像入库与记忆流水线
 
-上传照片 → 存原图到 storage/photos，写 MySQL photo 表 → parse_exif() 读取拍摄时间/GPS/相机型号 → analyze_photo_content() 多模态模型分析场景/物体/人数/标签 → detect_and_cluster_faces() InsightFace 人脸检测 + 余弦相似度聚类 + 自动合并 → extract_memory_from_vision() 从视觉结果抽取初始事实记忆 → 三层冲突消解 → 写入 Chroma 向量库 → 创建 EpisodeMemory，generate_opening_message() 生成 AI 主动开场白
+上传 → 原图落盘 + 写 `photo` 表 → `parse_exif()` 读拍摄时间 / GPS / 设备 → `analyze_photo_content()` 多模态分析场景 / 物体 / 人数 / 标签 → `detect_and_cluster_faces()` 人脸检测 + 余弦聚类 + **聚类后自动合并** → `extract_memory_from_vision()` 抽取初始事实记忆 → 三层冲突消解 → 写入 Chroma → 创建 `EpisodeMemory` 并生成 AI 主动开场白。
+
+### 双引擎融合检索
+
+两路召回后按意图加权统一排序，而不是简单合并：
+
+1. **实体侧**：按「命中条件数 / 条件总数」给出 0~1 匹配度（人物 / 地点 / 时间 / 标签各自独立召回后统计命中），而非 AND 硬过滤
+2. **向量侧**：Chroma 的 cosine 距离换算为 0~1 相似度（`clamp(1 - distance, 0, 1)`）
+3. **融合**：`final = w_entity × entity_score + w_vector × vector_score`，同分时实体命中更多的优先
+
+| 查询意图 | 实体权重 | 向量权重 | 说明 |
+|---|---|---|---|
+| statistic / relation | 0.75 | 0.25 | 依赖人物、地点、时间等实体精确匹配 |
+| recall | 0.40 | 0.60 | 模糊回忆，语义相似更重要 |
+| 未指定（直接调 API） | 0.60 | 0.40 | 默认权重 |
+| general | — | — | 普通寒暄，跳过召回（省一次 embedding，避免无关记忆污染上下文） |
+
+### 时序意图重排
+
+当查询含「第一次 / 最早」或「最近 / 上次」时，用户要的是时间维度的答案，而默认排序只看相关度。
+
+实现上**按相关度分档（档宽 0.05），档内按时序排、档间保持相关度顺序** —— 时间只在相关度相近的候选之间起决定作用，绝不覆盖相关度本身。
+
+时间从 `time_info` 自由文本解析（复用纪念日检测的解析器），并额外支持「2019年国庆」这类只含年份的表述。
 
 ### 记忆冲突消解（三层策略）
 
@@ -183,131 +219,70 @@ taskkill /F /PID <pid>
 | LLM 裁决 | 距离 0.15 ~ 0.45 | 调用 LLM 输出 skip / add / merge / archive |
 | 新增 | 距离 ≥ 0.45 | 视为新事件，独立入库 |
 
-- merge：字段互补合并，merge_count + 1
-- archive：旧记忆置为无效（保留溯源），新记忆替换
-- 记忆精炼：单条记忆合并次数 > 3 或 event 长度 > 100 字时，异步调用 LLM 凝练为一句话，重置合并计数
-- 数量治理：单张照片最多保留 5 条有效记忆，超出合并到最旧一条
+- **merge**：字段互补合并，`merge_count + 1`
+- **archive**：旧记忆置为无效（保留溯源），新记忆替换
+- **记忆精炼**：单条合并次数 > 3 或 event 长度 > 100 字时，异步调用 LLM 凝练为一句话并重置计数
+- **数量治理**：单张影像最多保留 5 条有效记忆，超出合并到最旧一条
 
-### 全局跨照片问答
+### 跨影像问答
 
-用户提问 → _parse_intent() 意图解析（recall/statistic/compare/relation/general）→ 人名模糊匹配 → hybrid_search() 双引擎检索（向量语义 + 人物/地点/时间/标签过滤）→ 构建记忆上下文（最多 15 条）→ LLM 综合回答，末尾用 [照片:photo_id] 标注引用 → 对话历史存入 storage/global_chat.json（最多保留 100 条）
+用户提问 → `_parse_intent()` 解析意图（recall / statistic / compare / relation / general）并提取实体条件与时序要求 → 人名模糊匹配 → `hybrid_search()` 融合检索 → 构建记忆上下文（最多 15 条）→ LLM 综合回答，末尾以 `[照片:photo_id]` 标注引用 → 历史存入 `storage/global_chat.json`。
+
+> `general` 意图走独立的闲聊 prompt：跳过召回后素材必然为空，若沿用「必须说没有相关记忆」的规则，会把「你好」答成「我的记忆中没有相关记录」。
 
 ### 主动提醒调度
 
-- 后端启动时 start_scheduler() 启动守护线程，每 6 小时执行一轮
-- 纪念日提醒：正则解析记忆中的日期，匹配未来 7 天内周年日，幂等 key 为 anniversary:{fact_id}:{anniversary_date}
-- 年度回忆：为上一年度预生成故事（LLM），同一年度只推一次，生成失败不推送留待下轮重试
-- 单实例锁：storage/.scheduler.lock 原子创建 + mtime 心跳，生产模式 2 worker 下只有一个进程真正运行
-- 通知写入 storage/notifications.json，前端通过 /api/proactive/notifications 拉取红点与弹窗
+- 启动时 `start_scheduler()` 拉起守护线程，每 6 小时执行一轮
+- **纪念日**：解析记忆中日期，匹配未来 7 天内周年日，幂等 key 为 `anniversary:{fact_id}:{anniversary_date}`
+- **年度回忆**：为上一年度预生成故事（LLM），同一年度只推一次；生成失败不推送，留待下轮重试
+- **单实例锁**：`storage/.scheduler.lock` 原子创建 + mtime 心跳 + `atexit` 释放，生产模式 2 worker 下只有一个进程真正运行
+- 通知写入 `storage/notifications.json`，前端通过 `/api/proactive/notifications` 拉取红点与弹窗
 
 ---
 
-## API 概览
+## 前端界面
 
-### 照片与人物
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| POST | /api/photo/upload | 上传照片并触发完整解析流水线 |
-| GET | /api/photo/list | 照片列表（按上传时间倒序） |
-| GET | /api/photo/detail | 照片详情（EXIF + 视觉 + 人物 + 记忆） |
-| GET | /api/photo/image/{photo_id} | 照片原图文件 |
-| GET | /api/photo/persons | 照片识别到的人物 |
-| GET | /api/person/photos | 某人物出现的所有照片 |
-| PUT | /api/person/rename | 人物改名（后台同步关联记忆） |
-| POST | /api/person/merge-similar | 合并相似人物 |
-
-### 对话与记忆
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| POST | /api/chat/send | 单照片对话 |
-| GET | /api/chat/history | 单照片对话历史 |
-| GET | /api/memory/photo | 单照片的记忆事实列表 |
-| POST | /api/search/hybrid | 双引擎混合搜索 |
-| POST | /api/global/chat | 全局跨照片问答 |
-| GET | /api/global/history | 全局对话历史 |
-| DELETE | /api/global/history | 清空全局对话历史 |
-
-### 主动交互
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | /api/proactive/missing-info | 信息补全检测 |
-| GET | /api/proactive/similar-photos | 相似照片推荐 |
-| GET | /api/proactive/anniversaries | 纪念日提醒 |
-| POST | /api/proactive/yearly-recap | 年度回忆生成（即时，调试用） |
-| GET | /api/proactive/notifications | 主动提醒通知列表 |
-| POST | /api/proactive/notifications/read | 标记通知已读 |
-
-### 系统与评测
-
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | /api/health | 健康检查 |
-| POST | /api/eval/run | 触发评测（后台运行，可选 dimension） |
-| GET | /api/eval/status | 查询评测状态与结果摘要 |
-
----
-
-## 数据模型
-
-| 表 | 核心字段 | 说明 |
-|---|---|---|
-| photo | photo_id, file_path, exif_info(JSON), vision_analysis(JSON), parse_status, face_parse_status | 照片元数据与解析结果 |
-| episode_memory | episode_id, photo_id, full_chat_history(JSON), user_story, summary | 单照片情景记忆 |
-| person | person_id, name, face_feature(JSON), photo_count | 人物聚类实体 |
-| memory_fact | fact_id, time_info, location, event, person_relation, emotion, tags(JSON), source, related_photo_ids, related_person_ids, merge_count | 结构化事实记忆 |
-| photo_person | photo_id, person_id | 照片-人物多对多关联表 |
-
----
-
-## 评测体系
-
-通过 POST /api/eval/run 触发，后台线程运行，结果写入 backend/evaluation/reports/（md + json）。
-
-合成数据集共 80 条（记忆抽取 20 / 冲突更新 20 / 跨照片推理 30 / 主动交互 10），非真实用户数据。
-
-| 维度 | 评测内容 | 核心指标 | 基线 |
-|---|---|---|---|
-| 记忆抽取 | 六字段抽取正确率 | 字段覆盖率 / 硬一致率 / Judge 分 | 覆盖 ≥ 90%, Judge ≥ 3.5 |
-| 冲突更新 | skip/add/merge/archive 决策 | 决策准确率 | ≥ 95% |
-| 跨照片推理 | 多记忆综合回答 | Judge 分（准确/完整/可溯源） | ≥ 4.0 |
-| 主动交互 | 信息补全 / 纪念日 / 年度回忆 | 三类子准确率 / 年度覆盖率 | 补全 ≥ 95%, 纪念日 ≥ 90%, 年度 ≥ 90% |
-
-- Judge 使用独立配置的 JUDGE_MODEL_*（未配置时回退主模型），保证评分一致性
-- 报告包含基线达标对比表 + 20% 人工抽检清单（固定种子 42，可复现）
-
----
+| 视图 | 说明 |
+|---|---|
+| **运行控制台**（首页） | 影像资产 / 人物实体 / 记忆条目 / 知识维度指标；自动化处理管线（各阶段挂真实计数）+ 近 7 天入库量；知识标签分布与记忆来源构成；模型端点绑定状态与能力开关 |
+| **影像资产库** | 文件夹开合动画展开；卡片支持 3D 跟随光标倾斜；悬停可快捷命名 |
+| **影像问答** | 单张影像的知识问答 + 结构化记忆 / 识别人物 / 相似影像侧栏；标题处可内联命名 |
+| **跨影像问答** | 独立弹层，跨全部影像检索作答，展示引用照片 |
+| **主动提醒** | 顶栏铃铛未读红点 + 通知面板（纪念日展示相关照片，年度回忆展示预生成故事与统计） |
 
 ## 数据备份与迁移
 
-需手动备份以下数据：
+需手动备份：
 
-- MySQL：mysqldump 导出 personal_agent 库全量 SQL
-- Chroma 向量库：复制 backend/storage/chroma/
-- 照片原图：复制 backend/storage/photos/
-- 全局对话记录：复制 backend/storage/global_chat.json
+- MySQL：`mysqldump` 导出 `personal_agent` 库全量 SQL
+- Chroma 向量库：复制 `backend/storage/chroma/`
+- 影像原图：复制 `backend/storage/photos/`
+- 对话与通知：复制 `backend/storage/global_chat.json`、`storage/notifications.json`
 
 ```bash
-# MySQL 导出示例
 mysqldump -h127.0.0.1 -P3306 -uroot -p personal_agent > backups/mysql_personal_agent.sql
 ```
 
-迁移到新机器：旧机备份 → 复制项目到新机 → MySQL 导入 SQL → 还原 chroma / photos 目录 → 配置 .env → 启动。
+迁移到新机器：旧机备份 → 复制项目 → 导入 MySQL SQL → 还原 chroma / photos → 配置 `.env` → 启动（启动时自动补齐表结构）。
 
 ---
 
 ## 常见问题
 
-**Q：照片上传后一直显示"解析中"？**
-检查后端窗口日志，多为视觉模型额度或 VISION_MODEL_* 配置错误。启动时后端会打印模型端点自检日志，确认 base_url 与 key 已正确配置。
+**Q：影像上传后一直显示「解析中」？**
+检查后端日志，多为视觉模型额度或 `VISION_MODEL_*` 配置问题。启动时的模型端点自检日志会打印实际生效的 `base_url`。
 
 **Q：AI 对话报错或无回复？**
-检查 MODEL_BASE_URL 是否指向正确的 OpenAI 兼容地址（未配置时会静默回退到 https://api.openai.com/v1），以及模型额度是否充足。
+重点检查 `MODEL_BASE_URL`。未配置时会静默回退到 `https://api.openai.com/v1`，用第三方模型 key 调用会 401 或长时间超时（前端表现为 500）。后端启动时会对该情况打印明确告警。
+
+**Q：请求长时间挂起最后超时？**
+模型客户端已配置超时与重试（`LLM_TIMEOUT` / `LLM_MAX_RETRIES` / `VISION_TIMEOUT`，可在 `.env` 覆盖，默认 60s / 1 次）。若仍频繁超时，先确认 `base_url` 可达。
 
 **Q：向量检索不可用？**
-检查 EMBEDDING_* 配置。未配置时系统自动回退为纯实体条件检索，全局问答仍可工作但语义召回能力下降。
+检查 `EMBEDDING_*` 配置。未配置时自动回退为纯实体条件检索，问答仍可工作但语义召回能力下降。
 
 **Q：纪念日提醒没有出现？**
-调度器每 6 小时才跑一轮，且需记忆中存在可解析的日期字段。可通过 GET /api/proactive/anniversaries 手动查询当前命中的纪念日。
+调度器每 6 小时才跑一轮，且需记忆中存有可解析日期。可用 `GET /api/proactive/anniversaries` 即时查询。
+
+**Q：升级后表结构对不上（如缺 `display_name`）？**
+无需手动处理。后端启动时会自动执行幂等增量迁移补列；仅当确实需要重建库时才运行 `python -m db.init_db`（**会清空所有数据**）。
